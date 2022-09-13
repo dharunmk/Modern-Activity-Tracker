@@ -1,3 +1,3 @@
-Modern Activity Tracker
+# Modern Activity Tracker
 
 TBD
