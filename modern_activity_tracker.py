@@ -66,7 +66,7 @@ def activity_chooser():
 
 
 
-
+root.title('Activity Tracker')
 # set window size
 root.geometry('300x300')
 # add heading
