@@ -9,8 +9,26 @@ from tg_secrets import *
 account = 'me'
 app = Client(account, api_id=API_ID, api_hash=API_HASH)
 app.start()
-current_bio = '@SmartManojChannel'
-ts = datetime.now().strftime('%I:%M')
+
+# TODO: fetch bio from telegram
+
+
+# save bio to file for later use
+def fetch_bio():
+    username = app.get_me().username
+    chat = app.get_chat('@' + username)
+    current_bio = chat.bio.split('|')[-1].strip()
+    with open('bio.txt', 'w') as file:
+        file.write(current_bio)
+    return current_bio
+# check if bio.txt exists
+if os.path.exists('bio.txt'):
+    with open('bio.txt', 'r') as file:
+        current_bio = file.read()
+else:
+    current_bio = fetch_bio()
+
+
 # choices Eating, Sleeping, Yoga, Bathing, Sun bathing
 # tkinter button for choosing the activity
 root = Tk()
@@ -27,10 +45,17 @@ activities = [
 
 last_index = None
 testing = 0
+last_activity_ts = None
+# humanize time
+import humanize
+def humanize_time(seconds):
+    return humanize.naturaldelta(seconds)
+
 def set_activity(index):
     global current_activity, last_index
     current_activity = activities[index].lower()
-    ts = datetime.now().strftime('%I:%M')
+    timestamp = datetime.now()
+    ts = timestamp.strftime('%I:%M %p')
     date = datetime.now().strftime('%d-%b-%Y %I:%M:%p')
     if last_index is not None:
         buttons[last_index].config(bg='brown')
@@ -46,6 +71,12 @@ def set_activity(index):
     last_index = index
     # set label text
     activity_label.config(text=f'You are now {current_activity} from {ts}')
+    # set last activity timestamp
+    global last_activity_ts
+    if last_activity_ts is not None:
+        time_elapsed = timestamp - last_activity_ts
+        last_activity_label.config(text=f'Last activity: {current_activity} for {humanize_time(time_elapsed)}')
+    last_activity_ts = timestamp
 
 
 def activity_chooser():
@@ -68,17 +99,33 @@ def activity_chooser():
 
 root.title('Activity Tracker')
 # set window size
-root.geometry('300x300')
+root.geometry('300x320')
 # add heading
 heading = Label(root, text='Choose your activity', font=('Arial', 15))
 heading.pack()
 # add break
-break_label = Label(root, text='\n')
-break_label.pack()
+def add_break(text = '\n'):
+    break_label = Label(root, text=text)
+    break_label.pack()
+add_break()
 # add frame
 frame = Frame(root)
 frame.pack()
 activity_chooser()
 activity_label = Label(root, text='-', font=('Helvetica', 10))
 activity_label.pack()
+last_activity_label = Label(root, text='-', font=('Helvetica', 10))
+last_activity_label.pack()
+add_break()
+made_with_love_text ='Made with ❤️ by ம🥰'
+made_with_love_img = open('made.png', 'rb')
+made_with_love = PhotoImage(data=made_with_love_img.read())
+# reduce image size by 70%
+made_with_love = made_with_love.subsample(2, 2)
+made_with_love_label = Label(root, image=made_with_love, compound=LEFT)
+made_with_love_label.pack()
+add_break()
+add_break()
+add_break()
+add_break('-')
 root.mainloop()
