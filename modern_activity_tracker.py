@@ -34,22 +34,24 @@ else:
 root = Tk()
 buttons = []
 activities = [
-    'Sunbathing',
-    'Bathing',
-    'Doing yoga',
-    'Sleeping',
-    'Eating',
-    'Walking',
-    'Working',
+    'Sunbathe',
+    'Bathe',
+    'Do yoga',
+    'Sleep',
+    'Eat',
+    'Walk',
+    'Work',
+    'Play',
 ]
 
 last_index = None
 testing = 0
 last_activity_ts = None
+last_activity = None
 # humanize time
 import humanize
 def humanize_time(seconds):
-    return humanize.naturaldelta(seconds)
+    return humanize.precisedelta(seconds, minimum_unit='minutes')
 
 def set_activity(index):
     global current_activity, last_index
@@ -70,13 +72,20 @@ def set_activity(index):
     print(current_activity)
     last_index = index
     # set label text
-    activity_label.config(text=f'You are now {current_activity} from {ts}')
+    if 'do' in current_activity:
+        current_activity_now = current_activity.replace('do','doing')
+    else:
+        current_activity_now = current_activity+'ing' if current_activity[-1] != 'e' else current_activity[:-1]+'ing'
+    activity_label.config(text=f'You are now {current_activity_now} from {ts}')
     # set last activity timestamp
     global last_activity_ts
+    global last_activity
     if last_activity_ts is not None:
         time_elapsed = timestamp - last_activity_ts
-        last_activity_label.config(text=f'Last activity: {current_activity} for {humanize_time(time_elapsed)}')
+        last_activity_label.config(text=f'Last activity: {last_activity} for {humanize_time(time_elapsed)}')
     last_activity_ts = timestamp
+    # set last activity
+    last_activity = current_activity
 
 
 def activity_chooser():
@@ -122,7 +131,7 @@ made_with_love_img = open('made.png', 'rb')
 made_with_love = PhotoImage(data=made_with_love_img.read())
 # reduce image size by 70%
 made_with_love = made_with_love.subsample(2, 2)
-made_with_love_label = Label(root, image=made_with_love, compound=LEFT)
+made_with_love_label = Label(root, image=made_with_love, compound=LEFT, background='black')
 made_with_love_label.pack()
 add_break()
 add_break()
