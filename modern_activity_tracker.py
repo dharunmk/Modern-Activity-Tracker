@@ -10,24 +10,29 @@ account = 'me'
 app = Client(account, api_id=API_ID, api_hash=API_HASH)
 app.start()
 
-# TODO: fetch bio from telegram
-
-
 # save bio to file for later use
 def fetch_bio():
-    username = app.get_me().username
     chat = app.get_chat('@' + username)
     current_bio = chat.bio.split('|')[-1].strip()
     with open('bio.txt', 'w') as file:
         file.write(current_bio)
     return current_bio
+
+# check if username.txt exists
+if os.path.exists('username.txt'):
+    with open('username.txt', 'r') as file:
+        username = file.read()
+else:
+    username = app.get_me().username
+    with open('username.txt', 'w') as file:
+        file.write(username)
+
 # check if bio.txt exists
 if os.path.exists('bio.txt'):
     with open('bio.txt', 'r') as file:
         current_bio = file.read()
 else:
     current_bio = fetch_bio()
-
 
 # choices Eating, Sleeping, Yoga, Bathing, Sun bathing
 # tkinter button for choosing the activity
@@ -42,6 +47,8 @@ activities = [
     'Walk',
     'Work',
     'Play',
+    'Meeting',
+    'Custom',
 ]
 
 last_index = None
@@ -53,9 +60,22 @@ import humanize
 def humanize_time(seconds):
     return humanize.precisedelta(seconds, minimum_unit='minutes')
 
+def enter_custom_activity():
+    # options
+    options = ['rest due to fever']
+    # add option as numbered list
+    text = 'Enter custom activity\n'
+    for k,i in enumerate(options):
+        text += f'{k+1}. {i}\n'
+    # get option number
+    option = int(prompt(text=text, title='Custom activity', default='1'))
+    return options[option-1]
+
 def set_activity(index):
     global current_activity, last_index
     current_activity = activities[index].lower()
+    if current_activity == 'custom':
+        current_activity = enter_custom_activity()
     timestamp = datetime.now()
     ts = timestamp.strftime('%I:%M %p')
     date = datetime.now().strftime('%d-%b-%Y %I:%M:%p')
@@ -75,7 +95,14 @@ def set_activity(index):
     if 'do' in current_activity:
         current_activity_now = current_activity.replace('do','doing')
     else:
-        current_activity_now = current_activity+'ing' if current_activity[-1] != 'e' else current_activity[:-1]+'ing'
+        # split due and add ing
+        if 'due' in current_activity:
+            _ = current_activity.split(' due')
+            current_activity_now = _[0] + 'ing due' + _[1]
+        elif current_activity == 'meeting':
+            current_activity_now = 'in a meeting'
+        else:
+            current_activity_now = current_activity+'ing' if current_activity[-1] != 'e' else current_activity[:-1]+'ing'
     activity_label.config(text=f'You are now {current_activity_now} from {ts}')
     # set last activity timestamp
     global last_activity_ts
@@ -100,7 +127,7 @@ def activity_chooser():
     #  line break
     Label(frame, text='\n').grid(row=3, column=0)
     # last 3 button in the third row
-    for i in range(4, 7):
+    for i in range(4, len(activities)):
         buttons[i].grid(row=4+i//2, column=i % 2)
 
 
@@ -137,4 +164,13 @@ add_break()
 add_break()
 add_break()
 add_break('-')
+# button to reload app
+def reload_app():
+    root.destroy()
+    os.system('cd C:\Users\smart\Documents\Modern-Activity-Tracker; python3 modern_activity_tracker.py &')
+
+if username == 'SmartManoj':
+    reload_button = Button(root, text='Reload', command=reload_app)
+    reload_button.pack()
+
 root.mainloop()
