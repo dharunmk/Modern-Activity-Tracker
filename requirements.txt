@@ -1,4 +1,6 @@
-humanize==4.0.0
-PyMsgBox==1.0.9
-Pyrogram==2.0.11
-TgCrypto==1.2.5
+pycaw
+humanize
+PyMsgBox
+Pyrogram
+TgCrypto
+git+https://github.com/rytilahti/python-miio.git

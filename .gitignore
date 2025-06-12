@@ -4,3 +4,7 @@ me.session-journal
 __pycache__
 bio.txt
 username.txt
+.env
+current_activity.txt
+ip.txt
+logs.txt
