@@ -53,6 +53,7 @@ activities = [
     'Meeting',
     'Custom',
     'Fan',
+    'Screen',
 ]
 
 last_index = None
@@ -76,82 +77,91 @@ def enter_custom_activity():
     return options[option-1]
 
 def set_activity(index):
-    global last_activity_ts
-    global last_activity
-    global current_activity, last_index
-    current_activity = activities[index].lower()
-    with open('current_activity.txt', 'w') as file:
-        file.write(current_activity)
-    if current_activity == 'fan':
-        toggle_fan()
-        return
-    if current_activity == 'custom':
-        current_activity = enter_custom_activity()
-    timestamp = datetime.now()
-    if current_activity == 'work' or last_activity == 'work':
-        toggle_fan()
-        pass
-    dnd_activities = ['eat','sleep', 'do yoga', ]
-    if current_activity in dnd_activities:
-        monitor_off()
-        set_mute(True)
-    elif last_activity in dnd_activities:
-        set_mute(False)
-    ts = timestamp.strftime('%I:%M %p')
-    date = datetime.now().strftime('%d-%b-%Y %I:%M:%p')
-    if last_index is not None:
-        buttons[last_index].config(bg='brown')
-    buttons[index].config(bg='green')
     try:
-        new_bio = f'Went to {current_activity} at {ts}'
-        if current_bio:
-            new_bio += ' | ' + current_bio
-        app.update_profile(bio=new_bio)
-        custom_emojis = {
-            'sunbathe': 5431766464040283359, # 😎
-            'bathe': 5469629946534043706, # 🛁
-            'do yoga': 5253555484811610534, # 🧘
-            'sleep': 5440456175017532988, # 😴
-            'eat': 5224200886581992369, # 😋
-            'walk': 5420631872994553493, # 🚶
-            'work': 5319161050128459957, # 👨‍💻
-            'meeting': 5453957997418004470, # 👥
-        }
-        custom_emoji_id = custom_emojis.get(current_activity)
-        if custom_emoji_id:
-            app.set_emoji_status(types.EmojiStatus(custom_emoji_id=custom_emoji_id))
+        global last_activity_ts
+        global last_activity
+        global current_activity, last_index
+        current_activity = activities[index].lower()
+        with open('current_activity.txt', 'w') as file:
+            file.write(current_activity)
+        if current_activity == 'fan':
+            toggle_fan()
+            return
+        if current_activity == 'screen':
+            monitor_off()
+            return
+        if current_activity == 'custom':
+            current_activity = enter_custom_activity()
+        timestamp = datetime.now()
+        if current_activity == 'work' or last_activity == 'work':
+            toggle_fan()
+            pass
+        dnd_activities = ['eat','sleep', 'do yoga', ]
+        if current_activity in dnd_activities:
+            monitor_off()
+            set_mute(True)
+        elif last_activity in dnd_activities:
+            set_mute(False)
+        ts = timestamp.strftime('%I:%M %p')
+        date = datetime.now().strftime('%d-%b-%Y %I:%M:%p')
+        if last_index is not None:
+            buttons[last_index].config(bg='brown')
+        buttons[index].config(bg='green')
+        try:
+            new_bio = f'Went to {current_activity} at {ts}'
+            if current_bio:
+                new_bio += ' | ' + current_bio
+            app.update_profile(bio=new_bio)
+            custom_emojis = {
+                'sunbathe': 5431766464040283359, # 😎
+                'bathe': 5469629946534043706, # 🛁
+                'do yoga': 5253555484811610534, # 🧘
+                'sleep': 5440456175017532988, # 😴
+                'eat': 5224200886581992369, # 😋
+                'walk': 5420631872994553493, # 🚶
+                'work': 5319161050128459957, # 👨‍💻
+                'meeting': 5453957997418004470, # 👥
+            }
+            custom_emoji_id = custom_emojis.get(current_activity)
+            if custom_emoji_id:
+                app.set_emoji_status(types.EmojiStatus(custom_emoji_id=custom_emoji_id))
+        except Exception as e:
+            alert('MAT'+str(e))
+            with open('logs.txt', 'w') as file:
+                e=traceback.format_exc()
+                print(e, file=file)
+        if not testing:
+            with open('modern_activity_tracker.txt', 'a') as file:
+                print(date, current_activity, file=file, sep=', ')
+        print(current_activity)
+        last_index = index
+        # set label text
+        
+        if 'do' in current_activity:
+            current_activity_now = current_activity.replace('do','doing')
+        else:
+            # split due and add ing
+            if 'due' in current_activity:
+                _ = current_activity.split(' due')
+                current_activity_now = _[0] + 'ing due' + _[1]
+            elif current_activity == 'meeting':
+                current_activity_now = 'in a meeting'
+            else:
+                current_activity_now = current_activity+'ing' if current_activity[-1] != 'e' else current_activity[:-1]+'ing'
+        activity_label.config(text=f'You are now {current_activity_now} from {ts}')
+        # set last activity timestamp
+        
+        if last_activity_ts is not None:
+            time_elapsed = timestamp - last_activity_ts
+            last_activity_label.config(text=f'Last activity: {last_activity} for {humanize_time(time_elapsed)}')
+        last_activity_ts = timestamp
+        # set last activity
+        last_activity = current_activity
     except Exception as e:
         alert('MAT'+str(e))
         with open('logs.txt', 'w') as file:
             e=traceback.format_exc()
             print(e, file=file)
-    if not testing:
-        with open('modern_activity_tracker.txt', 'a') as file:
-            print(date, current_activity, file=file, sep=', ')
-    print(current_activity)
-    last_index = index
-    # set label text
-    
-    if 'do' in current_activity:
-        current_activity_now = current_activity.replace('do','doing')
-    else:
-        # split due and add ing
-        if 'due' in current_activity:
-            _ = current_activity.split(' due')
-            current_activity_now = _[0] + 'ing due' + _[1]
-        elif current_activity == 'meeting':
-            current_activity_now = 'in a meeting'
-        else:
-            current_activity_now = current_activity+'ing' if current_activity[-1] != 'e' else current_activity[:-1]+'ing'
-    activity_label.config(text=f'You are now {current_activity_now} from {ts}')
-    # set last activity timestamp
-    
-    if last_activity_ts is not None:
-        time_elapsed = timestamp - last_activity_ts
-        last_activity_label.config(text=f'Last activity: {last_activity} for {humanize_time(time_elapsed)}')
-    last_activity_ts = timestamp
-    # set last activity
-    last_activity = current_activity
 
 
 def activity_chooser():
