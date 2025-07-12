@@ -44,6 +44,7 @@ buttons = []
 activities = [
     'Sunbathe',
     'Bathe',
+    'Oil bathe',
     'Do yoga',
     'Sleep',
     'Eat',
@@ -170,14 +171,15 @@ def activity_chooser():
         button = Button(frame, text=i.upper(), command=lambda k=k: set_activity(k), width=20, bg='brown', fg='white')
         buttons.append(button)
     
+    first_n = 5
     # first four buttons in two rows
-    for i in range(4):
+    for i in range(first_n):
         buttons[i].grid(row=i//2, column=i%2)
     #  line break
-    Label(frame, text='\n').grid(row=3, column=0)
+    Label(frame, text='\n').grid(row=first_n//2 + 1, column=0)
     # last 3 button in the third row
-    for i in range(4, len(activities)):
-        buttons[i].grid(row=4+i//2, column=i % 2)
+    for i in range(first_n, len(activities)):
+        buttons[i].grid(row=first_n + (i-1)//2, column=(i-1) % 2)
 
 
 
@@ -209,8 +211,6 @@ made_with_love = PhotoImage(data=made_with_love_img.read())
 made_with_love = made_with_love.subsample(2, 2)
 made_with_love_label = Label(root, image=made_with_love, compound=LEFT, background='black')
 made_with_love_label.pack()
-add_break()
-add_break()
 add_break()
 add_break('-')
 # button to reload app
