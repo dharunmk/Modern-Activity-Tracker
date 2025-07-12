@@ -99,10 +99,22 @@ def set_activity(index):
             pass
         dnd_activities = ['eat','sleep', 'do yoga', ]
         if current_activity in dnd_activities:
+            with open('logs.txt', 'a') as log:
+                log.write(f'{datetime.now()}: About to call monitor_off() for {current_activity}\n')
             monitor_off()
+            with open('logs.txt', 'a') as log:
+                log.write(f'{datetime.now()}: monitor_off() completed for {current_activity}\n')
+            with open('logs.txt', 'a') as log:
+                log.write(f'{datetime.now()}: About to call set_mute(True) for {current_activity}\n')
             set_mute(True)
+            with open('logs.txt', 'a') as log:
+                log.write(f'{datetime.now()}: set_mute(True) completed for {current_activity}\n')
         elif last_activity in dnd_activities:
+            with open('logs.txt', 'a') as log:
+                log.write(f'{datetime.now()}: About to call set_mute(False) for {last_activity}\n')
             set_mute(False)
+            with open('logs.txt', 'a') as log:
+                log.write(f'{datetime.now()}: set_mute(False) completed for {last_activity}\n')
         ts = timestamp.strftime('%I:%M %p')
         date = datetime.now().strftime('%d-%b-%Y %I:%M:%p')
         if last_index is not None:
