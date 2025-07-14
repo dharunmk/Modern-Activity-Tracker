@@ -95,8 +95,13 @@ def set_activity(index):
             current_activity = enter_custom_activity()
         timestamp = datetime.now()
         if current_activity == 'work' or last_activity == 'work':
-            toggle_fan()
-            pass
+            try:
+                toggle_fan()
+            except Exception as e:
+                with open('logs.txt', 'a') as file:
+                    e=traceback.format_exc()
+                    print(e, file=file)
+
         dnd_activities = ['eat','sleep', 'do yoga', ]
         if current_activity in dnd_activities:
             with open('logs.txt', 'a') as log:
