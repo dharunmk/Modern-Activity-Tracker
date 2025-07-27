@@ -5,19 +5,17 @@ from dotenv import load_dotenv
 # load_dotenv()
 
 def toggle_fan():
-    # return
-    with open('.env') as file:
-        cmd = file.read().strip()
-    with open('ip.txt') as file:
-        ip = file.read().strip()
-    cmd = cmd.replace('{ip}',ip)
-    # subprocess.call(cmd,shell=True)
-    # capture output
     for i in range(5):
+        with open('.env') as file:
+            cmd = file.read().strip()
+        with open('ip.txt') as file:
+            ip = file.read().strip()
+        cmd = cmd.replace('{ip}',ip)
         output = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE).stdout.decode('utf-8')
         if 'Unable to discover the device' not in output:
             break
         import ipr
+        print('Resolving IP')
         ipr.resolve_ip()
         sleep(1)
 
