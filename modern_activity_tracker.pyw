@@ -2,7 +2,7 @@ from pyrogram import types
 import traceback
 from pyrogram import Client, filters
 from pyrogram.enums import ChatType
-from pymsgbox import *
+from pymsgbox import alert, prompt
 from datetime import *
 from tkinter import *
 import os
@@ -244,4 +244,10 @@ if username == 'SmartManoj':
     reload_button.pack()
     root.geometry('300x500')
 
-root.mainloop()
+try:
+    root.mainloop()
+except Exception as e:
+    alert(f'MAT: {str(e)}')
+    with open('logs.txt', 'a') as file:
+        e=traceback.format_exc()
+        print(e, file=file)
