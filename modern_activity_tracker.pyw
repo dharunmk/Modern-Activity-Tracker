@@ -177,8 +177,8 @@ def set_activity(index):
         # set last activity
         last_activity = current_activity
     except Exception as e:
-        alert('MAT'+str(e))
-        with open('logs.txt', 'w') as file:
+        alert(f'MAT: {str(e)}')
+        with open('logs.txt', 'a') as file:
             e=traceback.format_exc()
             print(e, file=file)
 
