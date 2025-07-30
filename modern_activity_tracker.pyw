@@ -146,7 +146,7 @@ def set_activity(index):
                 app.set_emoji_status(types.EmojiStatus(custom_emoji_id=custom_emoji_id))
         except Exception as e:
             alert('MAT'+str(e))
-            with open('logs.txt', 'w') as file:
+            with open('logs.txt', 'a') as file:
                 e=traceback.format_exc()
                 print(e, file=file)
         if not testing:
@@ -223,12 +223,19 @@ last_activity_label = Label(root, text='-', font=('Helvetica', 10))
 last_activity_label.pack()
 add_break()
 made_with_love_text ='Made with ❤️ by ம🥰'
-made_with_love_img = open('made.png', 'rb')
-made_with_love = PhotoImage(data=made_with_love_img.read())
-# reduce image size by 70%
-made_with_love = made_with_love.subsample(2, 2)
-made_with_love_label = Label(root, image=made_with_love, compound=LEFT, background='black')
-made_with_love_label.pack()
+try:
+    with open('made.png', 'rb') as made_with_love_img:
+        made_with_love = PhotoImage(data=made_with_love_img.read())
+    # reduce image size by 70%
+    made_with_love = made_with_love.subsample(2, 2)
+    made_with_love_label = Label(root, image=made_with_love, compound=LEFT, background='black')
+    made_with_love_label.pack()
+except Exception as e:
+    # If image fails to load, just show text
+    made_with_love_label = Label(root, text=made_with_love_text, background='black', fg='white')
+    made_with_love_label.pack()
+    with open('logs.txt', 'a') as file:
+        file.write(f'{datetime.now()}: Image loading failed: {str(e)}\n')
 add_break()
 add_break('-')
 # button to reload app
@@ -243,6 +250,15 @@ if username == 'SmartManoj':
     reload_button = Button(root, text='Reload', command=reload_app)
     reload_button.pack()
     root.geometry('300x500')
+
+# Prevent window from being destroyed accidentally
+def on_closing():
+    with open('logs.txt', 'a') as file:
+        file.write(f'{datetime.now()}: Window closing event detected\n')
+    # Don't actually close, just log the event
+    return "break"
+
+root.protocol("WM_DELETE_WINDOW", on_closing)
 
 try:
     root.mainloop()
