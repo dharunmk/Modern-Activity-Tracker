@@ -8,3 +8,5 @@ username.txt
 current_activity.txt
 ip.txt
 logs.txt
+me.session-wal
+me.session-shm

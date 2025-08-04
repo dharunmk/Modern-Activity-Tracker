@@ -6,16 +6,26 @@ from pymsgbox import alert, prompt
 from datetime import *
 from tkinter import *
 import os
+import asyncio
 from tg_secrets import *
 from hc import toggle_fan
 from sys_utils import set_mute, monitor_off
+
 account = 'me'
 app = Client(account, api_id=API_ID, api_hash=API_HASH)
-app.start()
+
+# Initialize the client properly
+async def init_client():
+    await app.start()
+
+# Run the async initialization
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
+loop.run_until_complete(init_client())
 
 # save bio to file for later use
-def fetch_bio():
-    chat = app.get_chat('@' + username)
+async def fetch_bio():
+    chat = await app.get_chat('@' + username)
     current_bio = chat.bio.split('|')[-1].strip()
     with open('bio.txt', 'w') as file:
         file.write(current_bio)
@@ -26,7 +36,12 @@ if os.path.exists('username.txt'):
     with open('username.txt', 'r') as file:
         username = file.read()
 else:
-    username = app.get_me().username
+    # Get username asynchronously
+    async def get_username():
+        me = await app.get_me()
+        return me.username
+    
+    username = asyncio.run(get_username())
     with open('username.txt', 'w') as file:
         file.write(username)
 
@@ -35,7 +50,7 @@ if os.path.exists('bio.txt'):
     with open('bio.txt', 'r') as file:
         current_bio = file.read()
 else:
-    current_bio = fetch_bio()
+    current_bio = asyncio.run(fetch_bio())
 
 # choices Eating, Sleeping, Yoga, Bathing, Sun bathing
 # tkinter button for choosing the activity
@@ -76,6 +91,17 @@ def enter_custom_activity():
     # get option number
     option = int(prompt(text=text, title='Custom activity', default='1'))
     return options[option-1]
+
+async def update_telegram_profile(new_bio, custom_emoji_id):
+    try:
+        await app.update_profile(bio=new_bio)
+        if custom_emoji_id:
+            await app.set_emoji_status(types.EmojiStatus(custom_emoji_id=custom_emoji_id))
+    except Exception as e:
+        alert('MAT'+str(e))
+        with open('logs.txt', 'a') as file:
+            e=traceback.format_exc()
+            print(e, file=file)
 
 def set_activity(index):
     try:
@@ -125,30 +151,34 @@ def set_activity(index):
         if last_index is not None:
             buttons[last_index].config(bg='brown')
         buttons[index].config(bg='green')
+        
+        # Prepare the new bio and emoji status
+        new_bio = f'Went to {current_activity} at {ts}'
+        if current_bio:
+            new_bio += ' | ' + current_bio
+            
+        custom_emojis = {
+            'sunbathe': 5431766464040283359, # 😎
+            'bathe': 5336864316912051427, # 🛀
+            'oil bathe': 5469629946534043706, # 🛁
+            'do yoga': 5253555484811610534, # 🧘
+            'sleep': 5440456175017532988, # 😴
+            'eat': 5224200886581992369, # 😋
+            'walk': 5420631872994553493, # 🚶
+            'work': 5319161050128459957, # 👨‍💻
+            'meeting': 5453957997418004470, # 👥
+        }
+        custom_emoji_id = custom_emojis.get(current_activity)
+        
+        # Run the async update in a new event loop
         try:
-            new_bio = f'Went to {current_activity} at {ts}'
-            if current_bio:
-                new_bio += ' | ' + current_bio
-            app.update_profile(bio=new_bio)
-            custom_emojis = {
-                'sunbathe': 5431766464040283359, # 😎
-                'bathe': 5336864316912051427, # 🛀
-                'oil bathe': 5469629946534043706, # 🛁
-                'do yoga': 5253555484811610534, # 🧘
-                'sleep': 5440456175017532988, # 😴
-                'eat': 5224200886581992369, # 😋
-                'walk': 5420631872994553493, # 🚶
-                'work': 5319161050128459957, # 👨‍💻
-                'meeting': 5453957997418004470, # 👥
-            }
-            custom_emoji_id = custom_emojis.get(current_activity)
-            if custom_emoji_id:
-                app.set_emoji_status(types.EmojiStatus(custom_emoji_id=custom_emoji_id))
+            loop.run_until_complete(update_telegram_profile(new_bio, custom_emoji_id))
         except Exception as e:
             alert('MAT'+str(e))
             with open('logs.txt', 'a') as file:
                 e=traceback.format_exc()
                 print(e, file=file)
+                
         if not testing:
             with open('modern_activity_tracker.txt', 'a') as file:
                 print(date, current_activity, file=file, sep=', ')
