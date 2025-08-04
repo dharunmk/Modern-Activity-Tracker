@@ -4,3 +4,4 @@ PyMsgBox
 Pyrogram
 TgCrypto
 git+https://github.com/rytilahti/python-miio.git
+git+https://github.com/hydrogram/hydrogram.git@58c173064faf3427115ccab0e464741f48dc2781

@@ -1,7 +1,7 @@
-from pyrogram import types
+from hydrogram import types
 import traceback
-from pyrogram import Client, filters
-from pyrogram.enums import ChatType
+from hydrogram import Client, filters
+from hydrogram.enums import ChatType
 from pymsgbox import alert, prompt
 from datetime import *
 from tkinter import *
