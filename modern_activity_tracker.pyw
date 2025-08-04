@@ -251,15 +251,6 @@ if username == 'SmartManoj':
     reload_button.pack()
     root.geometry('300x500')
 
-# Prevent window from being destroyed accidentally
-def on_closing():
-    with open('logs.txt', 'a') as file:
-        file.write(f'{datetime.now()}: Window closing event detected\n')
-    # Don't actually close, just log the event
-    return "break"
-
-root.protocol("WM_DELETE_WINDOW", on_closing)
-
 try:
     root.mainloop()
 except Exception as e:
