@@ -1,18 +1,19 @@
-from hydrogram import types
+from telethon import TelegramClient, events
+from telethon.tl.functions.account import UpdateProfileRequest
+from telethon.tl.functions.account import UpdateEmojiStatusRequest
+from telethon.tl.types import EmojiStatus
 import traceback
-from hydrogram import Client, filters
-from hydrogram.enums import ChatType
 from pymsgbox import alert, prompt
 from datetime import *
 from tkinter import *
 import os
 import asyncio
-from tg_secrets import *
+from tg_secrets import API_ID, API_HASH
 from hc import toggle_fan
 from sys_utils import set_mute, monitor_off
 
-account = 'me'
-app = Client(account, api_id=API_ID, api_hash=API_HASH)
+account = 'telethon_session'
+app = TelegramClient(account, API_ID, API_HASH)
 
 # Initialize the client properly
 async def init_client():
@@ -25,8 +26,8 @@ loop.run_until_complete(init_client())
 
 # save bio to file for later use
 async def fetch_bio():
-    chat = await app.get_chat('@' + username)
-    current_bio = chat.bio.split('|')[-1].strip()
+    chat = await app.get_entity('@' + username)
+    current_bio = chat.about.split('|')[-1].strip()
     with open('bio.txt', 'w') as file:
         file.write(current_bio)
     return current_bio
@@ -94,9 +95,11 @@ def enter_custom_activity():
 
 async def update_telegram_profile(new_bio, custom_emoji_id):
     try:
-        await app.update_profile(bio=new_bio)
+        with open('logs.txt', 'a') as file:
+            file.write(f'{datetime.now()}: About to update profile with bio: {new_bio}\n')
+        await app(UpdateProfileRequest(about=new_bio))
         if custom_emoji_id:
-            await app.set_emoji_status(types.EmojiStatus(custom_emoji_id=custom_emoji_id))
+            await app(UpdateEmojiStatusRequest(EmojiStatus(document_id=custom_emoji_id)))
     except Exception as e:
         alert('MAT'+str(e))
         with open('logs.txt', 'a') as file:
@@ -120,7 +123,8 @@ def set_activity(index):
         if current_activity == 'custom':
             current_activity = enter_custom_activity()
         timestamp = datetime.now()
-        if current_activity == 'work' or last_activity == 'work':
+        work_activities = ['work', 'meeting']
+        if current_activity in work_activities or last_activity in work_activities:
             try:
                 toggle_fan()
             except Exception as e:
@@ -130,9 +134,10 @@ def set_activity(index):
 
         dnd_activities = ['eat','sleep', 'do yoga', ]
         if current_activity in dnd_activities:
-            with open('logs.txt', 'a') as log:
-                log.write(f'{datetime.now()}: About to call monitor_off() for {current_activity}\n')
-            monitor_off()
+            if current_activity == 'sleep' and 0:
+                with open('logs.txt', 'a') as log:
+                    log.write(f'{datetime.now()}: About to call monitor_off() for {current_activity}\n')
+                monitor_off()
             with open('logs.txt', 'a') as log:
                 log.write(f'{datetime.now()}: monitor_off() completed for {current_activity}\n')
             with open('logs.txt', 'a') as log:

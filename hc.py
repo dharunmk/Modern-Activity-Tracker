@@ -11,8 +11,9 @@ def toggle_fan():
         with open('ip.txt') as file:
             ip = file.read().strip()
         cmd = cmd.replace('{ip}',ip)
-        output = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE).stdout.decode('utf-8')
-        if 'Unable to discover the device' not in output:
+        output = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE, stderr=subprocess.STDOUT).stdout.decode('utf-8')
+        if 'Unable to discover the device' not in output and 'Invalid IP' not in output:
+            print(output)
             break
         import ipr
         print('Resolving IP')
