@@ -1,7 +1,5 @@
 from telethon import TelegramClient, events
 from telethon.tl.functions.account import UpdateProfileRequest
-from telethon.tl.functions.account import UpdateEmojiStatusRequest
-from telethon.tl.types import EmojiStatus
 import traceback
 from pymsgbox import alert, prompt
 from datetime import *
@@ -230,7 +228,7 @@ def enter_custom_activity():
     option = int(prompt(text=text, title='Custom activity', default='1'))
     return options[option-1]
 
-async def update_telegram_profile(new_bio, custom_emoji_id):
+async def update_telegram_profile(new_bio):
     if not app:
         print("Telegram client not available - skipping profile update")
         return
@@ -239,8 +237,6 @@ async def update_telegram_profile(new_bio, custom_emoji_id):
         with open('logs.txt', 'a') as file:
             file.write(f'{datetime.now()}: About to update profile with bio: {new_bio}\n')
         await app(UpdateProfileRequest(about=new_bio))
-        if custom_emoji_id:
-            await app(UpdateEmojiStatusRequest(EmojiStatus(document_id=custom_emoji_id)))
         print(f"Successfully updated Telegram profile: {new_bio}")
     except Exception as e:
         error_msg = f"Failed to update Telegram profile: {str(e)}"
@@ -300,29 +296,16 @@ def set_activity(index):
         date = datetime.now().strftime('%d-%b-%Y %I:%M:%p')
         if last_index is not None:
             buttons[last_index].config(bg='brown')
-        buttons[index].config(bg='green')
+        buttons[index].config(bg='black')
         
-        # Prepare the new bio and emoji status
+        # Prepare the new bio
         new_bio = f'Went to {current_activity} at {ts}'
         if current_bio:
             new_bio += ' | ' + current_bio
-            
-        custom_emojis = {
-            'sunbathe': 5431766464040283359, # 😎
-            'bathe': 5336864316912051427, # 🛀
-            'oil bathe': 5469629946534043706, # 🛁
-            'do yoga': 5253555484811610534, # 🧘
-            'sleep': 5440456175017532988, # 😴
-            'eat': 5224200886581992369, # 😋
-            'walk': 5420631872994553493, # 🚶
-            'work': 5319161050128459957, # 👨‍💻
-            'meeting': 5453957997418004470, # 👥
-        }
-        custom_emoji_id = custom_emojis.get(current_activity)
         
         # Run the async update using the Telegram event loop
         try:
-            run_telegram_async(update_telegram_profile(new_bio, custom_emoji_id))
+            run_telegram_async(update_telegram_profile(new_bio))
         except Exception as e:
             error_msg = f"Failed to run Telegram update: {str(e)}"
             print(error_msg)
@@ -370,7 +353,7 @@ def activity_chooser():
     for k, i in enumerate(activities):
         # Create button with proper text and command
         button = Button(frame, text=i.upper(), command=lambda k=k: set_activity(k), 
-                       width=15, height=2, bg='brown', fg='white', 
+                       width=15, height=2, bg='black', fg='white', 
                        font=('Arial', 10, 'bold'))
         buttons.append(button)
         
