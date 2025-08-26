@@ -353,7 +353,7 @@ def activity_chooser():
     for k, i in enumerate(activities):
         # Create button with proper text and command
         button = Button(frame, text=i.upper(), command=lambda k=k: set_activity(k), 
-                       width=15, height=2, bg='black', fg='white', 
+                       width=15, height=2, bg='black', fg='black', 
                        font=('Arial', 10, 'bold'))
         buttons.append(button)
         
