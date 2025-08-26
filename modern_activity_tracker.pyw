@@ -11,48 +11,121 @@ import asyncio
 from hc import toggle_fan
 from sys_utils import set_mute, monitor_off
 from dotenv import load_dotenv
-load_dotenv()
 
-account = 'telethon_session'
-app = TelegramClient(account, os.getenv('API_ID'), os.getenv('API_HASH'))
+# Try to load environment variables, but don't fail if they're missing
+try:
+    load_dotenv()
+except:
+    pass
 
-# Initialize the client properly
-async def init_client():
-    await app.start()
+# Check if we have the required environment variables
+api_id = os.getenv('API_ID')
+api_hash = os.getenv('API_HASH')
 
-# Run the async initialization
-loop = asyncio.new_event_loop()
-asyncio.set_event_loop(loop)
-loop.run_until_complete(init_client())
+# Initialize Telegram client only if credentials are available
+app = None
+if api_id and api_hash:
+    account = 'telethon_session'
+    app = TelegramClient(account, api_id, api_hash)
+else:
+    print("Warning: API_ID and API_HASH not found in environment variables.")
+    print("Telegram functionality will be disabled.")
+
+# Global variables for async operations
+username = None
+current_bio = None
+
+# Initialize the client and fetch initial data
+async def initialize_app():
+    global username, current_bio
+    
+    if not app:
+        print("Telegram client not initialized - skipping initialization")
+        return
+    
+    try:
+        # Start the client
+        await app.start()
+        
+        # Get username
+        if os.path.exists('username.txt'):
+            with open('username.txt', 'r') as file:
+                username = file.read()
+        else:
+            me = await app.get_me()
+            username = me.username
+            with open('username.txt', 'w') as file:
+                file.write(username)
+        
+        # Get bio
+        if os.path.exists('bio.txt'):
+            with open('bio.txt', 'r') as file:
+                current_bio = file.read()
+        else:
+            try:
+                chat = await app.get_entity('@' + username)
+                current_bio = chat.about.split('|')[-1].strip()
+                with open('bio.txt', 'w') as file:
+                    file.write(current_bio)
+            except Exception as e:
+                current_bio = ""
+                with open('logs.txt', 'a') as file:
+                    file.write(f'{datetime.now()}: Failed to fetch bio: {str(e)}\n')
+    except Exception as e:
+        print(f"Failed to initialize Telegram client: {e}")
+        with open('logs.txt', 'a') as file:
+            file.write(f'{datetime.now()}: Initialization failed: {str(e)}\n')
 
 # save bio to file for later use
 async def fetch_bio():
-    chat = await app.get_entity('@' + username)
-    current_bio = chat.about.split('|')[-1].strip()
-    with open('bio.txt', 'w') as file:
-        file.write(current_bio)
-    return current_bio
-
-# check if username.txt exists
-if os.path.exists('username.txt'):
-    with open('username.txt', 'r') as file:
-        username = file.read()
-else:
-    # Get username asynchronously
-    async def get_username():
-        me = await app.get_me()
-        return me.username
+    global current_bio
+    if not app:
+        return current_bio
     
-    username = asyncio.run(get_username())
-    with open('username.txt', 'w') as file:
-        file.write(username)
+    try:
+        chat = await app.get_entity('@' + username)
+        current_bio = chat.about.split('|')[-1].strip()
+        with open('bio.txt', 'w') as file:
+            file.write(current_bio)
+        return current_bio
+    except Exception as e:
+        with open('logs.txt', 'a') as file:
+            file.write(f'{datetime.now()}: Failed to fetch bio: {str(e)}\n')
+        return current_bio
 
-# check if bio.txt exists
-if os.path.exists('bio.txt'):
-    with open('bio.txt', 'r') as file:
-        current_bio = file.read()
-else:
-    current_bio = asyncio.run(fetch_bio())
+# Initialize the app synchronously
+def init_app_sync():
+    if not app:
+        print("Skipping Telegram initialization - no credentials")
+        return
+    
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(initialize_app())
+    except Exception as e:
+        print(f"Initialization error: {e}")
+        with open('logs.txt', 'a') as file:
+            file.write(f'{datetime.now()}: Initialization error: {str(e)}\n')
+    finally:
+        loop.close()
+
+# Cleanup function for the Telegram client
+def cleanup_app():
+    if not app:
+        return
+    
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(app.disconnect())
+        loop.close()
+    except Exception as e:
+        with open('logs.txt', 'a') as file:
+            file.write(f'{datetime.now()}: Cleanup error: {str(e)}\n')
+
+# Run initialization
+init_app_sync()
 
 # choices Eating, Sleeping, Yoga, Bathing, Sun bathing
 # tkinter button for choosing the activity
@@ -78,6 +151,7 @@ last_index = None
 testing = 0
 last_activity_ts = None
 last_activity = None
+
 # humanize time
 import humanize
 def humanize_time(seconds):
@@ -95,6 +169,10 @@ def enter_custom_activity():
     return options[option-1]
 
 async def update_telegram_profile(new_bio, custom_emoji_id):
+    if not app:
+        print("Telegram client not available - skipping profile update")
+        return
+    
     try:
         with open('logs.txt', 'a') as file:
             file.write(f'{datetime.now()}: About to update profile with bio: {new_bio}\n')
@@ -178,7 +256,10 @@ def set_activity(index):
         
         # Run the async update in a new event loop
         try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
             loop.run_until_complete(update_telegram_profile(new_bio, custom_emoji_id))
+            loop.close()
         except Exception as e:
             alert('MAT'+str(e))
             with open('logs.txt', 'a') as file:
@@ -218,46 +299,54 @@ def set_activity(index):
             e=traceback.format_exc()
             print(e, file=file)
 
-
 def activity_chooser():
-    for k,i in enumerate(activities):
-        # add button
-        button = Button(frame, text=i.upper(), command=lambda k=k: set_activity(k), width=20, bg='brown', fg='white')
+    # Create buttons in a 2-column grid layout
+    for k, i in enumerate(activities):
+        # Create button with proper text and command
+        button = Button(frame, text=i.upper(), command=lambda k=k: set_activity(k), 
+                       width=15, height=2, bg='brown', fg='white', 
+                       font=('Arial', 10, 'bold'))
         buttons.append(button)
+        
+        # Calculate row and column for grid layout
+        row = k // 2
+        column = k % 2
+        
+        # Place button in grid
+        button.grid(row=row, column=column, padx=5, pady=5, sticky='ew')
     
-    first_n = 5
-    # first four buttons in two rows
-    for i in range(first_n):
-        buttons[i].grid(row=i//2, column=i%2)
-    #  line break
-    Label(frame, text='\n').grid(row=first_n//2 + 1, column=0)
-    # last 3 button in the third row
-    for i in range(first_n, len(activities)):
-        buttons[i].grid(row=first_n + (i-1)//2, column=(i-1) % 2)
-
-
-
+    # Configure grid weights for better spacing
+    frame.grid_columnconfigure(0, weight=1)
+    frame.grid_columnconfigure(1, weight=1)
 
 root.title('Activity Tracker')
-# set window size
-root.geometry('300x320')
+# set window size - increased to accommodate all buttons
+root.geometry('400x600')
 # add heading
-heading = Label(root, text='Choose your activity', font=('Arial', 15))
-heading.pack()
+heading = Label(root, text='Choose your activity', font=('Arial', 15, 'bold'))
+heading.pack(pady=10)
+
 # add break
 def add_break(text = '\n'):
     break_label = Label(root, text=text)
     break_label.pack()
+
 add_break()
+
 # add frame
-frame = Frame(root)
-frame.pack()
+frame = Frame(root, relief='raised', borderwidth=2)
+frame.pack(pady=10, padx=20, fill='both', expand=True)
+
 activity_chooser()
+
 activity_label = Label(root, text='-', font=('Helvetica', 10))
 activity_label.pack()
+
 last_activity_label = Label(root, text='-', font=('Helvetica', 10))
 last_activity_label.pack()
+
 add_break()
+
 made_with_love_text ='Made with ❤️ by ம🥰'
 try:
     with open('made.png', 'rb') as made_with_love_img:
@@ -272,20 +361,23 @@ except Exception as e:
     made_with_love_label.pack()
     with open('logs.txt', 'a') as file:
         file.write(f'{datetime.now()}: Image loading failed: {str(e)}\n')
+
 add_break()
 add_break('-')
+
 # button to reload app
 def reload_app():
     root.destroy()
     import webbrowser
     webbrowser.open(r'C:\Users\smart\Documents\Modern-Activity-Tracker\modern_activity_tracker.pyw')
-    # os.system(r'cd C:\Users\smart\Documents\Modern-Activity-Tracker && py modern_activity_tracker.pyw &')
-
 
 if username == 'SmartManoj':
     reload_button = Button(root, text='Reload', command=reload_app)
     reload_button.pack()
-    root.geometry('300x500')
+    root.geometry('400x700')
+
+# Set up cleanup when window closes
+root.protocol("WM_DELETE_WINDOW", lambda: [cleanup_app(), root.destroy()])
 
 try:
     root.mainloop()
@@ -294,3 +386,5 @@ except Exception as e:
     with open('logs.txt', 'a') as file:
         e=traceback.format_exc()
         print(e, file=file)
+finally:
+    cleanup_app()
