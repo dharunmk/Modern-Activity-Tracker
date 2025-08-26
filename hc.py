@@ -2,12 +2,12 @@ from datetime import datetime
 import os,subprocess
 from time import sleep
 from dotenv import load_dotenv
-# load_dotenv()
+load_dotenv()
 
 def toggle_fan():
     for i in range(5):
-        with open('.env') as file:
-            cmd = file.read().strip()
+        
+        cmd = os.getenv('FAN_CMD')
         with open('ip.txt') as file:
             ip = file.read().strip()
         cmd = cmd.replace('{ip}',ip)

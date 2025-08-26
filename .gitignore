@@ -10,6 +10,5 @@ ip.txt
 logs.txt
 me.session-wal
 me.session-shm
-tg_secrets.py
 telethon_session.session
 telethon_session.session-journal

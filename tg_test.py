@@ -3,13 +3,14 @@ from telethon import TelegramClient, events
 from telethon.tl.functions.users import GetFullUserRequest
 from telethon.tl.functions.channels import GetFullChannelRequest
 from telethon.tl.functions.messages import GetFullChatRequest
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
-# Your API credentials from https://my.telegram.org
-from tg_secrets import API_ID, API_HASH, PHONE_NUMBER
 
 async def get_user_bio(username_or_id):
     """Fetch bio for a user or channel"""
-    async with TelegramClient('telethon_session', API_ID, API_HASH) as client:
+    async with TelegramClient('telethon_session', os.getenv('API_ID'), os.getenv('API_HASH')) as client:
         try:
             # Try to get entity (user or channel)
             entity = await client.get_entity(username_or_id)

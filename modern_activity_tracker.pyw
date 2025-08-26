@@ -8,12 +8,13 @@ from datetime import *
 from tkinter import *
 import os
 import asyncio
-from tg_secrets import API_ID, API_HASH
 from hc import toggle_fan
 from sys_utils import set_mute, monitor_off
+from dotenv import load_dotenv
+load_dotenv()
 
 account = 'telethon_session'
-app = TelegramClient(account, API_ID, API_HASH)
+app = TelegramClient(account, os.getenv('API_ID'), os.getenv('API_HASH'))
 
 # Initialize the client properly
 async def init_client():
