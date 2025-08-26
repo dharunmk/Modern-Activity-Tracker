@@ -8,6 +8,8 @@ from datetime import *
 from tkinter import *
 import os
 import asyncio
+import threading
+import queue
 from hc import toggle_fan
 from sys_utils import set_mute, monitor_off
 from dotenv import load_dotenv
@@ -34,6 +36,9 @@ else:
 # Global variables for async operations
 username = None
 current_bio = None
+telegram_loop = None
+telegram_thread = None
+telegram_queue = queue.Queue()
 
 # Initialize the client and fetch initial data
 async def initialize_app():
@@ -93,18 +98,46 @@ async def fetch_bio():
             file.write(f'{datetime.now()}: Failed to fetch bio: {str(e)}\n')
         return current_bio
 
+# Function to run async operations in the Telegram event loop
+def run_telegram_async(coro):
+    if telegram_loop and not telegram_loop.is_closed():
+        future = asyncio.run_coroutine_threadsafe(coro, telegram_loop)
+        try:
+            return future.result(timeout=30)  # 30 second timeout
+        except Exception as e:
+            print(f"Telegram operation failed: {e}")
+            # Queue the error for main thread to handle
+            telegram_queue.put(('error', str(e)))
+            return None
+    else:
+        print("Telegram event loop not available")
+        return None
+
 # Initialize the app synchronously
 def init_app_sync():
+    global telegram_loop, telegram_thread
+    
     if not app:
         print("Skipping Telegram initialization - no credentials")
         return
     
+    # Create event loop in a separate thread for Telegram operations
+    def run_telegram_loop():
+        global telegram_loop
+        telegram_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(telegram_loop)
+        telegram_loop.run_forever()
+    
+    telegram_thread = threading.Thread(target=run_telegram_loop, daemon=True)
+    telegram_thread.start()
+    
+    # Wait a bit for the loop to start
+    import time
+    time.sleep(0.2)
+    
+    # Initialize the app in the Telegram event loop
     try:
-        # Create a new event loop for initialization only
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(initialize_app())
-        loop.close()
+        run_telegram_async(initialize_app())
     except Exception as e:
         print(f"Initialization error: {e}")
         with open('logs.txt', 'a') as file:
@@ -112,19 +145,46 @@ def init_app_sync():
 
 # Cleanup function for the Telegram client
 def cleanup_app():
-    if not app:
+    global telegram_loop, telegram_thread
+    
+    if not app or not telegram_loop:
         return
     
     try:
-        # Create a new event loop for cleanup only
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        # Disconnect the Telegram client
         if app.is_connected():
-            loop.run_until_complete(app.disconnect())
-        loop.close()
+            run_telegram_async(app.disconnect())
+        
+        # Stop the event loop
+        if not telegram_loop.is_closed():
+            telegram_loop.call_soon_threadsafe(telegram_loop.stop)
+        
+        # Wait for the thread to finish
+        if telegram_thread and telegram_thread.is_alive():
+            telegram_thread.join(timeout=2)
+            
+        # Close the event loop
+        if not telegram_loop.is_closed():
+            telegram_loop.close()
+            
     except Exception as e:
         with open('logs.txt', 'a') as file:
             file.write(f'{datetime.now()}: Cleanup error: {str(e)}\n')
+
+# Function to check for Telegram errors from main thread
+def check_telegram_errors():
+    try:
+        while not telegram_queue.empty():
+            msg_type, message = telegram_queue.get_nowait()
+            if msg_type == 'error':
+                alert(f'MAT: {message}')
+                with open('logs.txt', 'a') as file:
+                    file.write(f'{datetime.now()}: Telegram error: {message}\n')
+    except queue.Empty:
+        pass
+    
+    # Schedule the next check
+    root.after(100, check_telegram_errors)
 
 # Run initialization
 init_app_sync()
@@ -181,11 +241,15 @@ async def update_telegram_profile(new_bio, custom_emoji_id):
         await app(UpdateProfileRequest(about=new_bio))
         if custom_emoji_id:
             await app(UpdateEmojiStatusRequest(EmojiStatus(document_id=custom_emoji_id)))
+        print(f"Successfully updated Telegram profile: {new_bio}")
     except Exception as e:
-        alert('MAT'+str(e))
+        error_msg = f"Failed to update Telegram profile: {str(e)}"
+        print(error_msg)
         with open('logs.txt', 'a') as file:
-            e=traceback.format_exc()
-            print(e, file=file)
+            file.write(f'{datetime.now()}: {error_msg}\n')
+            file.write(f'{datetime.now()}: {traceback.format_exc()}\n')
+        # Queue the error for main thread to handle
+        telegram_queue.put(('error', error_msg))
 
 def set_activity(index):
     try:
@@ -256,17 +320,17 @@ def set_activity(index):
         }
         custom_emoji_id = custom_emojis.get(current_activity)
         
-        # Run the async update in a new event loop
+        # Run the async update using the Telegram event loop
         try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(update_telegram_profile(new_bio, custom_emoji_id))
-            loop.close()
+            run_telegram_async(update_telegram_profile(new_bio, custom_emoji_id))
         except Exception as e:
-            alert('MAT'+str(e))
+            error_msg = f"Failed to run Telegram update: {str(e)}"
+            print(error_msg)
             with open('logs.txt', 'a') as file:
-                e=traceback.format_exc()
-                print(e, file=file)
+                file.write(f'{datetime.now()}: {error_msg}\n')
+                file.write(f'{datetime.now()}: {traceback.format_exc()}\n')
+            # Queue the error for main thread to handle
+            telegram_queue.put(('error', error_msg))
                 
         if not testing:
             with open('modern_activity_tracker.txt', 'a') as file:
@@ -380,6 +444,9 @@ if username == 'SmartManoj':
 
 # Set up cleanup when window closes
 root.protocol("WM_DELETE_WINDOW", lambda: [cleanup_app(), root.destroy()])
+
+# Schedule the error checking function to run periodically
+root.after(100, check_telegram_errors)
 
 try:
     root.mainloop()
