@@ -99,16 +99,16 @@ def init_app_sync():
         print("Skipping Telegram initialization - no credentials")
         return
     
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
     try:
+        # Create a new event loop for initialization only
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         loop.run_until_complete(initialize_app())
+        loop.close()
     except Exception as e:
         print(f"Initialization error: {e}")
         with open('logs.txt', 'a') as file:
             file.write(f'{datetime.now()}: Initialization error: {str(e)}\n')
-    finally:
-        loop.close()
 
 # Cleanup function for the Telegram client
 def cleanup_app():
@@ -116,9 +116,11 @@ def cleanup_app():
         return
     
     try:
+        # Create a new event loop for cleanup only
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(app.disconnect())
+        if app.is_connected():
+            loop.run_until_complete(app.disconnect())
         loop.close()
     except Exception as e:
         with open('logs.txt', 'a') as file:
