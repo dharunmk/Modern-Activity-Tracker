@@ -6,3 +6,4 @@ fastapi
 uvicorn
 git+https://github.com/rytilahti/python-miio.git
 telethon
+python-dotenv
