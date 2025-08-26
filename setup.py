@@ -1,3 +1,3 @@
 import os 
-os.system('pip install -r requirements.txt')
-os.system('py modern_activity_tracker.py')
+os.system('python3 -m pip install -r requirements.txt')
+os.system('python3 modern_activity_tracker.pyw')
