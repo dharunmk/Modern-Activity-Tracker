@@ -1,0 +1,18 @@
+[Unit]
+Description=Modern Activity Tracker Web Application
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=dharunmk
+Group=dharunmk
+WorkingDirectory=/home/dharunmk/Modern-Activity-Tracker
+ExecStart=/home/dharunmk/Modern-Activity-Tracker/venv/bin/python /home/dharunmk/Modern-Activity-Tracker/web_app.py
+Restart=always
+RestartSec=10
+Environment=PATH=/home/dharunmk/Modern-Activity-Tracker/venv/bin
+
+[Install]
+WantedBy=multi-user.target
+
