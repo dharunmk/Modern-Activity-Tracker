@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Activity Tracker</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: bold;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.2em;
+        }
+
+        .activities-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+
+        .activity-btn {
+            background: #8B4513;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 15px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .activity-btn:hover {
+            background: #A0522D;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .activity-btn:active {
+            transform: translateY(0);
+        }
+
+        .activity-btn.selected {
+            background: #228B22;
+        }
+
+        .status-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 30px 0;
+            border-left: 5px solid #667eea;
+        }
+
+        .status-item {
+            margin: 10px 0;
+            font-size: 1.1em;
+        }
+
+        .status-label {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .status-value {
+            color: #666;
+        }
+
+        .current-activity {
+            color: #228B22;
+            font-weight: bold;
+        }
+
+        .footer {
+            margin-top: 40px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .loading {
+            display: none;
+            color: #667eea;
+            font-style: italic;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .activities-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏃‍♂️Zero Activity Tracker</h1>
+        <p class="subtitle">What are you doing now?</p>
+        
+        <div class="success-message" id="successMessage"></div>
+        <div class="error-message" id="errorMessage"></div>
+        
+        <form id="activityForm">
+            <div class="activities-grid">
+                {% for activity in activities %}
+                <button type="button" class="activity-btn" data-activity="{{ activity }}">
+                    {{ activity }}
+                </button>
+                {% endfor %}
+            </div>
+        </form>
+        
+        <div class="status-section">
+            <div class="status-item">
+                <span class="status-label">Current Activity:</span>
+                <span class="status-value current-activity" id="currentActivity">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Last Activity:</span>
+                <span class="status-value" id="lastActivity">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Time Elapsed:</span>
+                <span class="status-value" id="elapsedTime">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Username:</span>
+                <span class="status-value" id="username">-</span>
+            </div>
+        </div>
+        
+        <div class="loading" id="loading">Updating activity...</div>
+        
+        <div class="footer">
+            Made with ❤️ by Zero▓
+        </div>
+    </div>
+
+    <script>
+        let selectedActivity = null;
+        
+        // Handle activity button clicks
+        document.querySelectorAll('.activity-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove selected class from all buttons
+                document.querySelectorAll('.activity-btn').forEach(b => b.classList.remove('selected'));
+                
+                // Add selected class to clicked button
+                this.classList.add('selected');
+                selectedActivity = this.dataset.activity;
+                
+                // Set activity
+                setActivity(selectedActivity);
+            });
+        });
+        
+        async function setActivity(activity) {
+            const loading = document.getElementById('loading');
+            const successMessage = document.getElementById('successMessage');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            // Hide previous messages
+            successMessage.style.display = 'none';
+            errorMessage.style.display = 'none';
+            loading.style.display = 'block';
+            
+            try {
+                const formData = new FormData();
+                formData.append('activity', activity);
+                
+                const response = await fetch('/set_activity?t=' + Date.now(), {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                loading.style.display = 'none';
+                
+                if (result.success) {
+                    successMessage.textContent = result.message;
+                    successMessage.style.display = 'block';
+                    
+                    // Update status
+                    updateStatus();
+                } else {
+                    errorMessage.textContent = result.message;
+                    errorMessage.style.display = 'block';
+                }
+            } catch (error) {
+                loading.style.display = 'none';
+                errorMessage.textContent = 'Error: ' + error.message;
+                errorMessage.style.display = 'block';
+            }
+        }
+        
+        async function updateStatus() {
+            try {
+                const response = await fetch('/status?t=' + Date.now());
+                const status = await response.json();
+                
+                document.getElementById('currentActivity').textContent = status.current_activity || '-';
+                document.getElementById('lastActivity').textContent = status.last_activity || '-';
+                document.getElementById('elapsedTime').textContent = status.elapsed_time || '-';
+                document.getElementById('username').textContent = status.username || '-';
+            } catch (error) {
+                console.error('Error updating status:', error);
+            }
+        }
+        
+        // Update status every 30 seconds
+        setInterval(updateStatus, 30000);
+        
+        // Initial status update
+        updateStatus();
+    </script>
+</body>
+</html>

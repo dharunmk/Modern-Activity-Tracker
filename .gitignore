@@ -12,3 +12,4 @@ me.session-wal
 me.session-shm
 telethon_session.session
 telethon_session.session-journal
+/venv
