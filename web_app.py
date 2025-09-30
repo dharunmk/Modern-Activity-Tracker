@@ -202,6 +202,8 @@ async def set_activity(activity: str = Form(...)):
             new_bio = f'Watching movies/series at {ts}'
         elif current_activity == 'watching youtube':
             new_bio = f'Watching YouTube at {ts}'
+        elif current_activity == 'meeting':
+            new_bio = f'In a call with manoj at {ts}'
         else:
             new_bio = f'Went to {current_activity} at {ts}'
         if current_bio:

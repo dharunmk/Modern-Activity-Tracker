@@ -159,7 +159,10 @@ def set_activity(index):
         buttons[index].config(bg='green')
         
         # Prepare the new bio and emoji status
-        new_bio = f'Went to {current_activity} at {ts}'
+        if current_activity == 'meeting':
+            new_bio = f'In a call with manoj at {ts}'
+        else:
+            new_bio = f'Went to {current_activity} at {ts}'
         if current_bio:
             new_bio += ' | ' + current_bio
             
@@ -200,7 +203,7 @@ def set_activity(index):
                 _ = current_activity.split(' due')
                 current_activity_now = _[0] + 'ing due' + _[1]
             elif current_activity == 'meeting':
-                current_activity_now = 'in a meeting'
+                current_activity_now = 'in a call with manoj'
             else:
                 current_activity_now = current_activity+'ing' if current_activity[-1] != 'e' else current_activity[:-1]+'ing'
         activity_label.config(text=f'You are now {current_activity_now} from {ts}')
